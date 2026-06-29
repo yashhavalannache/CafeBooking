@@ -1,10 +1,21 @@
 # ☕ Brewed & Bliss — Premium Café Management Web App
 
-Brewed & Bliss is a modern, responsive full-stack web application designed for a premium artisanal café experience. The platform seamlessly bridges the gap between digital discovery and real-time storefront vibes, featuring an elegant customer-facing menu, a secure digital table reservation workflow, real-time café seating analytics, and an integrated audio ambiance hub.
+Brewed & Bliss is a modern, responsive full-stack web application designed to deliver an elegant, digital representation of a premium artisan café experience. Designed to bridge the gap between digital discovery and real-time storefront aesthetics, the application caters to remote professionals, coffee aficionados, and casual diners alike. It features an immersive, sunlit design language, live seating data tracking, dynamic menu exploration, and automated seat reservation capabilities built to scale.
+
+## 📖 Project Description
+
+Brewed & Bliss reimagines how consumers interact with culinary and workspace venues online. Built with a strict focus on visual hierarchy, accessibility, and high performance, the platform transforms a traditional static restaurant website into a dynamic, interactive lifestyle hub. 
+
+The application utilizes real-time tracking to broadcast live cafe data, giving remote workers instant visibility into ambient crowding and seating availability before they leave their desks. Guests can seamlessly browse an artisanal digital menu complete with specialized category filtering, preparation countdown timers, structural dietary badges, and live rating tallies. Beyond text and static graphics, the application deeply connects with the user through an embedded interactive audio streaming hub that broadcasts low-fi jazz mixes and natural cafe rain soundscapes, beautifully emulating the grounding atmosphere of a physical storefront. Under the hood, a secure, role-based administration system empowers managers to update daily menu specials, update structural configurations, and curate guest reviews instantly without requiring redeployments.
+
+### 🖼️ Landing Page Preview
+![Brewed & Bliss Landing Page Mockup](./src/pages/landing-page.jpg)
+*(Replace this path with your actual hosted image link or repository asset path once your screenshot is saved)*
 
 ---
 
 ## ✨ Features
+...
 
 ### 1. Customer Experience
 *   **Live Vibe Check:** Real-time visibility into the cafe's seating availability and environment to help remote workers and guests optimize their visits.
