@@ -4,18 +4,23 @@ Brewed & Bliss is a modern, responsive full-stack web application designed to de
 
 ## 📖 Project Description
 
-Brewed & Bliss reimagines how consumers interact with culinary and workspace venues online. Built with a strict focus on visual hierarchy, accessibility, and high performance, the platform transforms a traditional static restaurant website into a dynamic, interactive lifestyle hub. 
+Brewed & Bliss: Reimagining the Café Experience
+Brewed & Bliss transforms the traditional café website into a dynamic, high-performance lifestyle hub.
 
-The application utilizes real-time tracking to broadcast live cafe data, giving remote workers instant visibility into ambient crowding and seating availability before they leave their desks. Guests can seamlessly browse an artisanal digital menu complete with specialized category filtering, preparation countdown timers, structural dietary badges, and live rating tallies. Beyond text and static graphics, the application deeply connects with the user through an embedded interactive audio streaming hub that broadcasts low-fi jazz mixes and natural cafe rain soundscapes, beautifully emulating the grounding atmosphere of a physical storefront. Under the hood, a secure, role-based administration system empowers managers to update daily menu specials, update structural configurations, and curate guest reviews instantly without requiring redeployments.
+Live Vibe Tracking: Check real-time seating and crowding before you leave your desk.
 
+Artisanal Menu: Interactive digital menu with dietary badges, preparation timers, and live ratings.
+
+Ambient Soundscapes: Stream built-in lo-fi jazz and cafe rain audio to bring the storefront atmosphere home.
+
+Instant Admin Controls: Secure backend for managers to update daily specials and reviews instantly.
 ### 🖼️ Landing Page Preview
 ![Brewed & Bliss Landing Page Mockup](./src/pages/landing-page.jpg)
-*(Replace this path with your actual hosted image link or repository asset path once your screenshot is saved)*
+
 
 ---
 
 ## ✨ Features
-...
 
 ### 1. Customer Experience
 *   **Live Vibe Check:** Real-time visibility into the cafe's seating availability and environment to help remote workers and guests optimize their visits.
