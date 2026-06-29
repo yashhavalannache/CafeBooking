@@ -814,8 +814,8 @@ export default function HomePage() {
               <div className="space-y-6">
                 {[
                   { icon: MapPin, title: 'Address', text: '42 Coffee Lane, Indiranagar\nBengaluru, Karnataka 560038' },
-                  { icon: Phone, title: 'Phone', text: '+91 80 1234 5678' },
-                  { icon: Mail, title: 'Email', text: 'hello@brewedandbliss.in' },
+                  { icon: Phone, title: 'Phone', text: '+91 89 5119 2623' },
+                  { icon: Mail, title: 'Email', text: 'thunderbolt1899@gmail.com' },
                 ].map(i => (
                   <div key={i.title} className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/15 border border-[#D4AF37]/25 flex items-center justify-center flex-shrink-0">
