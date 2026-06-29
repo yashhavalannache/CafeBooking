@@ -2,25 +2,16 @@
 
 Brewed & Bliss is a modern, responsive full-stack web application designed to deliver an elegant, digital representation of a premium artisan café experience. Designed to bridge the gap between digital discovery and real-time storefront aesthetics, the application caters to remote professionals, coffee aficionados, and casual diners alike. It features an immersive, sunlit design language, live seating data tracking, dynamic menu exploration, and automated seat reservation capabilities built to scale.
 
-## 📖 Project Description
 
-Brewed & Bliss: Reimagining the Café Experience
-Brewed & Bliss transforms the traditional café website into a dynamic, high-performance lifestyle hub.
+---
 
-Live Vibe Tracking: Check real-time seating and crowding before you leave your desk.
-
-Artisanal Menu: Interactive digital menu with dietary badges, preparation timers, and live ratings.
-
-Ambient Soundscapes: Stream built-in lo-fi jazz and cafe rain audio to bring the storefront atmosphere home.
-
-Instant Admin Controls: Secure backend for managers to update daily specials and reviews instantly.
-### 🖼️ Landing Page Preview
+###  Landing Page Preview
 ![Brewed & Bliss Landing Page Mockup](./src/pages/landing-page.jpg)
 
 
 ---
 
-## ✨ Features
+##  Features
 
 ### 1. Customer Experience
 *   **Live Vibe Check:** Real-time visibility into the cafe's seating availability and environment to help remote workers and guests optimize their visits.
@@ -67,3 +58,7 @@ Instant Admin Controls: Secure backend for managers to update daily specials and
 ├── public/                        # Static aesthetic assets
 ├── tailwind.config.js             # Theme extensions & animation keyframe configurations
 └── package.json                   # Project scripts and dependencies
+
+
+
+<p align="center"> ✨ Maintained by <a href="https://github.com/yashhavalannache">Yash Havalannache</a> ✨ </p> 
