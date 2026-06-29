@@ -27,7 +27,7 @@ Brewed & Bliss is a modern, responsive full-stack web application designed to de
 
 ---
 
-## 🛠️ Tech Stack & Architecture
+##  Tech Stack & Architecture
 
 *   **Frontend Framework:** React 18 with TypeScript
 *   **Build Tool / Bundler:** Vite
@@ -38,7 +38,7 @@ Brewed & Bliss is a modern, responsive full-stack web application designed to de
 
 ---
 
-## 📁 Repository Structure
+##  Repository Structure
 
 ```text
 ├── src/
@@ -59,6 +59,6 @@ Brewed & Bliss is a modern, responsive full-stack web application designed to de
 ├── tailwind.config.js             # Theme extensions & animation keyframe configurations
 └── package.json                   # Project scripts and dependencies
 
-
+```
 
 <p align="center"> ✨ Maintained by <a href="https://github.com/yashhavalannache">Yash Havalannache</a> ✨ </p> 
