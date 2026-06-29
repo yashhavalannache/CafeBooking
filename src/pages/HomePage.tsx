@@ -396,7 +396,7 @@ export default function HomePage() {
       />
 
       {/* ── Hero ── */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-screen lg:min-h-0 lg:py-32 flex items-center justify-center overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('https://images.pexels.com/photos/2074130/pexels-photo-2074130.jpeg')" }}
@@ -405,7 +405,7 @@ export default function HomePage() {
         <div className="absolute top-1/4 right-16 w-24 h-24 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 animate-spin-slow hidden lg:block" />
         <div className="absolute bottom-1/3 left-16 w-16 h-16 rounded-full bg-[#D4AF37]/10 border border-[#D4AF37]/20 animate-float hidden lg:block" />
 
-        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto pt-24 lg:pt-0">
           {/* Live Vibe/Capacity Check Banner */}
           <div className="inline-flex items-center gap-2 bg-green-500/15 border border-green-500/30 px-3.5 py-1.5 rounded-full mb-4 animate-fade-in backdrop-blur-md">
             <span className="relative flex h-2 w-2">
@@ -424,25 +424,25 @@ export default function HomePage() {
             </div>
           </div>
 
-          <h1 className="font-display text-5xl sm:text-6xl lg:text-8xl font-bold text-[#FFF8E7] mb-6 leading-tight animate-fade-in delay-200">
+          <h1 className="font-display text-4xl sm:text-6xl lg:text-6xl xl:text-7xl font-bold text-[#FFF8E7] mb-6 leading-tight animate-fade-in delay-200">
             Brewed for<br />
             <span className="text-gold-gradient italic">Every Moment</span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-[#E6D3B3]/80 max-w-2xl mx-auto leading-relaxed mb-10 animate-fade-in delay-300">
+          <p className="text-base sm:text-xl text-[#E6D3B3]/80 max-w-2xl mx-auto leading-relaxed mb-8 animate-fade-in delay-300">
             Where exceptional coffee meets warm hospitality. A sanctuary crafted for those who appreciate the art of a perfect brew.
           </p>
 
-          <div className="relative inline-block mb-10 animate-fade-in delay-400">
-            <div className="relative w-16 h-16 mx-auto">
+          <div className="relative inline-block mb-8 animate-fade-in delay-400">
+            <div className="relative w-14 h-14 mx-auto">
               <SteamAnimation />
-              <div className="w-16 h-16 rounded-full bg-[#D4AF37]/20 border-2 border-[#D4AF37]/40 flex items-center justify-center backdrop-blur-sm">
-                <Coffee className="w-8 h-8 text-[#D4AF37]" />
+              <div className="w-14 h-14 rounded-full bg-[#D4AF37]/20 border-2 border-[#D4AF37]/40 flex items-center justify-center backdrop-blur-sm">
+                <Coffee className="w-6 h-6 text-[#D4AF37]" />
               </div>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center Alain-middle animate-fade-in delay-500">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pb-12 lg:pb-0 animate-fade-in delay-500">
             <Link
               to="/reservations"
               className="w-full sm:w-auto btn-ripple bg-gradient-to-r from-[#D4AF37] to-[#C8A228] text-[#2E1A12] px-8 py-4 rounded-full font-semibold text-base hover:shadow-2xl hover:shadow-[#D4AF37]/30 hover:scale-105 transition-all duration-300"
@@ -468,11 +468,12 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
-          <span className="text-xs text-[#E6D3B3]/60 uppercase tracking-[0.2em]">Scroll</span>
-          <ChevronDown className="w-5 h-5 text-[#E6D3B3]/60" />
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 hidden md:flex flex-col items-center gap-1 animate-bounce">
+          <span className="text-[10px] text-[#E6D3B3]/60 uppercase tracking-[0.2em]">Scroll</span>
+          <ChevronDown className="w-4 h-4 text-[#E6D3B3]/60" />
         </div>
       </section>
+
 
       {/* ── Our Daily Fresh Board (Digital Sidewalk Chalkboard Sign) ── */}
       <section className="py-12 bg-transparent -mt-10 relative z-20 px-4 sm:px-6">

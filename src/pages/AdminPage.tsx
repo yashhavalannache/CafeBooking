@@ -3,10 +3,18 @@ import { Link } from 'react-router-dom';
 import {
   LayoutDashboard, UtensilsCrossed, CalendarCheck, Users, MessageSquare,
   TrendingUp, Plus, Edit2, Trash2, Check, X, Search, RefreshCw,
-  CheckCircle, XCircle, Clock, ChevronDown, Eye, Coffee, LogOut, Lock
+  CheckCircle, XCircle, Clock, ChevronDown, Eye, Coffee, LogOut, Lock, Calendar
 } from 'lucide-react';
 import { supabase, type MenuItem, type Reservation, type Category, type ContactMessage } from '../lib/supabase';
 import { toast } from '../components/Toast';
+
+// ==========================================
+// 📧 EMAIL SERVICE CONFIGURATION
+// Configured with your verified EmailJS credentials
+// ==========================================
+const EMAILJS_SERVICE_ID = 'service_2zrmd2n';
+const EMAILJS_TEMPLATE_ID = 'template_xk775r9';
+const EMAILJS_PUBLIC_KEY = 'n8TXcpouQGNM-ptW6';
 
 type Tab = 'dashboard' | 'menu' | 'reservations' | 'messages';
 
@@ -35,7 +43,6 @@ function StatCard({ icon: Icon, label, value, sub, color }: { icon: React.Elemen
 }
 
 function StatusBadge({ status }: { status: string }) {
-  // Lowercase the status matching lookup map safely
   const normalStatus = status?.toLowerCase() || 'pending';
   const map: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -84,6 +91,7 @@ export default function AdminPage() {
   const [showMenuForm, setShowMenuForm] = useState(false);
   const [resSearch, setResSearch] = useState('');
   const [resFilter, setResFilter] = useState('all');
+  const [resDateFilter, setResDateFilter] = useState('upcoming'); // 'upcoming' | '1month' | '3months' | 'all'
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
@@ -125,8 +133,53 @@ export default function AdminPage() {
     loadAll();
   }, []);
 
+  // Internal routine to handle sending confirmation emails via REST API
+  const sendConfirmationEmail = async (reservation: Reservation) => {
+    if (!reservation.customer_email) return;
+
+    const bookingId = reservation.booking_id || `B&B-${reservation.id.slice(0, 6).toUpperCase()}`;
+    const formattedDate = new Date(reservation.reservation_date).toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    try {
+      const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service_id: EMAILJS_SERVICE_ID,
+          template_id: EMAILJS_TEMPLATE_ID,
+          user_id: EMAILJS_PUBLIC_KEY,
+          template_params: {
+            to_email: reservation.customer_email,
+            customer_name: reservation.customer_name,
+            booking_id: bookingId,
+            reservation_date: formattedDate,
+            reservation_time: reservation.reservation_time,
+            guests: reservation.guests,
+            seating_type: reservation.seating_type || 'Standard',
+            name: reservation.customer_name,
+            email: reservation.customer_email
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Email service returned an error status.');
+      }
+      console.log('Confirmation email dispatched successfully.');
+    } catch (emailErr) {
+      console.error('Email dispatch failure:', emailErr);
+      toast('Reservation confirmed, but notification email failed to send.', 'error');
+    }
+  };
+
   const updateReservationStatus = async (id: string, status: 'Confirmed' | 'Rejected' | 'Cancelled') => {
-    // 1. Optimistic UI update using exact capitalized labels
+    const targetReservation = reservations.find(r => r.id === id);
+
     setReservations(prevReservations => {
       const updated = prevReservations.map(r => r.id === id ? { ...r, status } : r);
       
@@ -140,12 +193,11 @@ export default function AdminPage() {
       return updated;
     });
 
-    // 2. Perform database synchronization matching exact Postgres casing conditions
     const { error } = await supabase.from('reservations').update({ status }).eq('id', id);
     if (error) { 
       console.error('Supabase error:', error);
       toast('Update failed on server. Reverting...', 'error'); 
-      await loadAll(); // Revert state from database truth if something goes wrong
+      await loadAll();
       return; 
     }
     
@@ -153,9 +205,12 @@ export default function AdminPage() {
       toast(`Reservation marked as ${status}.`, 'error');
     } else {
       toast(`Reservation marked as ${status}.`, 'success');
+      
+      if (status === 'Confirmed' && targetReservation) {
+        await sendConfirmationEmail(targetReservation);
+      }
     }
     
-    // 3. Final round-trip reconciliation update
     await loadAll();
   };
 
@@ -180,7 +235,7 @@ export default function AdminPage() {
     const op = editingItemId
       ? supabase.from('menu_items').update(payload).eq('id', editingItemId)
       : supabase.from('menu_items').insert(payload);
-    const { error } = await op;
+    const { error } = op;
     if (error) { toast('Save failed.', 'error'); return; }
     toast(editingItemId ? 'Item updated.' : 'Item added.', 'success');
     setMenuForm(emptyMenuForm);
@@ -214,6 +269,33 @@ export default function AdminPage() {
     loadAll();
   };
 
+  // Helper logic to evaluate if a reservation falls within the targeted date window
+  const applyDateFiltering = (r: Reservation) => {
+    if (resDateFilter === 'all') return true;
+
+    // Convert string timestamps safely into equivalent local date midnight configurations
+    const reservationDate = new Date(r.reservation_date);
+    reservationDate.setHours(0, 0, 0, 0);
+
+    const todayMidnight = new Date();
+    todayMidnight.setHours(0, 0, 0, 0);
+
+    if (resDateFilter === 'upcoming') {
+      return reservationDate >= todayMidnight;
+    }
+
+    const comparativeLimit = new Date();
+    comparativeLimit.setHours(0, 0, 0, 0);
+
+    if (resDateFilter === '1month') {
+      comparativeLimit.setMonth(comparativeLimit.getMonth() - 1);
+    } else if (resDateFilter === '3months') {
+      comparativeLimit.setMonth(comparativeLimit.getMonth() - 3);
+    }
+
+    return reservationDate >= comparativeLimit;
+  };
+
   const filteredReservations = reservations.filter(r => {
     const generatedId = r.booking_id || `B&B-${r.id.slice(0, 6).toUpperCase()}`;
     const matchSearch = !resSearch || 
@@ -222,8 +304,13 @@ export default function AdminPage() {
       r.customer_email?.toLowerCase().includes(resSearch.toLowerCase());
     
     const matchFilter = resFilter === 'all' || r.status?.toLowerCase() === resFilter.toLowerCase();
-    return matchSearch && matchFilter;
+    const matchDateWindow = applyDateFiltering(r);
+
+    return matchSearch && matchFilter && matchDateWindow;
   });
+
+  // Specifically for the Dashboard tab view list context
+  const dashboardFilteredReservations = reservations.filter(applyDateFiltering);
 
   const inputCls = 'w-full px-3.5 py-2.5 bg-white border border-[#E6D3B3] rounded-xl text-[#2E1A12] text-sm placeholder-[#6F4E37]/40 focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 transition-all';
 
@@ -231,7 +318,7 @@ export default function AdminPage() {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'menu', label: 'Menu Items', icon: UtensilsCrossed, badge: stats.totalMenuItems },
     { id: 'reservations', label: 'Reservations', icon: CalendarCheck, badge: stats.pendingReservations },
-    { id: 'messages', label: 'Messages', icon: stats.unreadMessages ? MessageSquare : MessageSquare, badge: stats.unreadMessages },
+    { id: 'messages', label: 'Messages', icon: MessageSquare, badge: stats.unreadMessages },
   ];
 
   return (
@@ -299,10 +386,10 @@ export default function AdminPage() {
           ))}
         </div>
 
-        {/* Main Content */}
+        {/* Main Content Component Window */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-8 pb-20 md:pb-8">
 
-          {/* DASHBOARD */}
+          {/* DASHBOARD TAB VIEW */}
           {tab === 'dashboard' && (
             <div>
               <h1 className="font-display text-3xl font-bold text-[#2E1A12] mb-8">Dashboard Overview</h1>
@@ -315,11 +402,26 @@ export default function AdminPage() {
                 <StatCard icon={Eye} label="Unread Messages" value={stats.unreadMessages} color="bg-red-100 text-red-500" />
               </div>
 
-              {/* Recent Reservations Table */}
+              {/* Recent Reservations Table Frame */}
               <div className="bg-white rounded-2xl border border-[#E6D3B3] overflow-hidden">
-                <div className="px-5 py-4 border-b border-[#E6D3B3] flex justify-between items-center">
-                  <h2 className="font-semibold text-[#2E1A12]">Recent Bookings</h2>
-                  <button onClick={() => setTab('reservations')} className="text-xs text-[#D4AF37] hover:text-[#C8A228] font-medium">View all</button>
+                <div className="px-5 py-4 border-b border-[#E6D3B3] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                    <h2 className="font-semibold text-[#2E1A12]">Recent Bookings</h2>
+                    <p className="text-[11px] text-[#6F4E37]/60 mt-0.5">Showing relevant timeframe entries</p>
+                  </div>
+                  <div className="flex items-center gap-3 w-full sm:w-auto self-stretch sm:self-auto">
+                    <select
+                      value={resDateFilter}
+                      onChange={e => setResDateFilter(e.target.value)}
+                      className="px-3 py-1.5 bg-[#FAF3E8] border border-[#E6D3B3] rounded-xl text-xs text-[#4E342E] focus:outline-none focus:border-[#D4AF37] cursor-pointer"
+                    >
+                      <option value="upcoming">Active & Upcoming</option>
+                      <option value="1month">Last 1 Month</option>
+                      <option value="3months">Last 3 Months</option>
+                      <option value="all">All Time History</option>
+                    </select>
+                    <button onClick={() => setTab('reservations')} className="text-xs text-[#D4AF37] hover:text-[#C8A228] font-medium whitespace-nowrap">View all</button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -331,7 +433,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E6D3B3]">
-                      {reservations.slice(0, 6).map(r => (
+                      {dashboardFilteredReservations.slice(0, 6).map(r => (
                         <tr key={r.id} className="hover:bg-[#FAF3E8] transition-colors">
                           <td className="px-4 py-3 font-mono text-xs font-bold text-[#D4AF37]">
                             {r.booking_id || `B&B-${r.id.slice(0, 6).toUpperCase()}`}
@@ -344,9 +446,9 @@ export default function AdminPage() {
                           <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
                         </tr>
                       ))}
-                      {reservations.length === 0 && (
+                      {dashboardFilteredReservations.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="text-center py-8 text-sm text-[#6F4E37]/50">No recent reservations found.</td>
+                          <td colSpan={5} className="text-center py-8 text-sm text-[#6F4E37]/50">No reservations found matching this timeframe context.</td>
                         </tr>
                       )}
                     </tbody>
@@ -356,7 +458,7 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* MENU MANAGEMENT */}
+          {/* MENU MANAGEMENT TAB VIEW */}
           {tab === 'menu' && (
             <div>
               <div className="flex items-center justify-between mb-6">
@@ -453,7 +555,7 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Menu Items Table */}
+              {/* Menu Items Table Matrix */}
               <div className="bg-white rounded-2xl border border-[#E6D3B3] overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -502,7 +604,7 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* RESERVATIONS HUB */}
+          {/* RESERVATIONS HUB DESK */}
           {tab === 'reservations' && (
             <div>
               <h1 className="font-display text-3xl font-bold text-[#2E1A12] mb-6">Reservations Desk</h1>
@@ -518,6 +620,19 @@ export default function AdminPage() {
                     className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E6D3B3] rounded-xl text-sm text-[#2E1A12] placeholder-[#6F4E37]/40 focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20"
                   />
                 </div>
+                
+                {/* 📅 New Timeframe Context Filter */}
+                <select
+                  value={resDateFilter}
+                  onChange={e => setResDateFilter(e.target.value)}
+                  className="px-4 py-2.5 bg-white border border-[#E6D3B3] rounded-xl text-sm text-[#4E342E] focus:outline-none focus:border-[#D4AF37] cursor-pointer"
+                >
+                  <option value="upcoming">Active & Upcoming</option>
+                  <option value="1month">Last 1 Month</option>
+                  <option value="3months">Last 3 Months</option>
+                  <option value="all">All History</option>
+                </select>
+
                 <select
                   value={resFilter}
                   onChange={e => setResFilter(e.target.value)}
@@ -533,87 +648,109 @@ export default function AdminPage() {
 
               <div className="space-y-3">
                 {filteredReservations.length === 0 ? (
-                  <div className="text-center py-16 text-[#6F4E37]/50">
-                    <CalendarCheck className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No active seating reservations found</p>
+                  <div className="text-center py-16 text-[#6F4E37]/50 bg-white rounded-2xl border border-[#E6D3B3]">
+                    <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#6F4E37]" />
+                    <p className="text-sm font-medium">No reservations match the selected search, status, or timeframe constraints.</p>
                   </div>
-                ) : filteredReservations.map(r => (
-                  <div key={r.id} className="bg-white rounded-2xl border border-[#E6D3B3] p-5 hover:shadow-md transition-shadow">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2 flex-wrap">
-                          <span className="font-mono text-xs text-[#D4AF37] font-bold bg-[#D4AF37]/10 px-2 py-0.5 rounded-lg">
-                            {r.booking_id || `B&B-${r.id.slice(0, 6).toUpperCase()}`}
-                          </span>
-                          <StatusBadge status={r.status} />
-                        </div>
-                        <p className="font-semibold text-[#2E1A12]">{r.customer_name}</p>
-                        <p className="text-xs text-[#6F4E37]/70 mt-0.5">{r.customer_email} · {r.customer_phone}</p>
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-[#4E342E]/70">
-                          <span>📅 {new Date(r.reservation_date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                          <span>🕐 {r.reservation_time}</span>
-                          <span>👥 {r.guests} guests</span>
-                          {r.table_number && <span>🪑 Table #{r.table_number}</span>}
-                          <span>{r.seating_type === 'indoor' ? 'Indoor' : 'Outdoor'} · {r.ac_preference === 'ac' ? 'AC' : 'Non-AC'}</span>
-                          {r.occasion !== 'none' && r.occasion && <span>🎉 {r.occasion}</span>}
-                        </div>
-                        {r.special_requests && (
-                          <p className="text-xs text-[#6F4E37]/60 mt-2 italic">"{r.special_requests}"</p>
-                        )}
-                      </div>
+                ) : (
+                  filteredReservations.map(r => {
+                    const generatedId = r.booking_id || `B&B-${r.id.slice(0, 6).toUpperCase()}`;
+                    return (
+                      <div key={r.id} className="bg-white border border-[#E6D3B3] rounded-2xl p-5 hover:shadow-md transition-all">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-[#FAF3E8] flex items-center justify-center text-[#D4AF37] flex-shrink-0 mt-0.5">
+                              <CalendarCheck className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <span className="font-mono text-xs font-bold text-[#D4AF37] tracking-wider uppercase">{generatedId}</span>
+                                <StatusBadge status={r.status} />
+                              </div>
+                              <h3 className="font-display font-bold text-[#2E1A12] mt-1 text-base">{r.customer_name}</h3>
+                              <p className="text-xs text-[#6F4E37]/70 mt-0.5">{r.customer_email} · {r.customer_phone || 'No Phone'}</p>
+                              
+                              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-xs text-[#4E342E]/80 font-medium">
+                                <span className="flex items-center gap-1.5 bg-[#FAF3E8] px-2.5 py-1 rounded-lg">
+                                  <Clock className="w-3.5 h-3.5 text-[#6F4E37]/70" />
+                                  {new Date(r.reservation_date).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} @ {r.reservation_time}
+                                </span>
+                                <span className="flex items-center gap-1.5 bg-[#FAF3E8] px-2.5 py-1 rounded-lg">
+                                  <Users className="w-3.5 h-3.5 text-[#6F4E37]/70" />
+                                  {r.guests} Guests ({r.seating_type || 'Standard'})
+                                </span>
+                              </div>
+                              {r.special_requests && (
+                                <div className="mt-2.5 p-2.5 bg-amber-50/50 border border-amber-100 rounded-xl text-xs text-[#6F4E37] italic">
+                                  &ldquo;{r.special_requests}&rdquo;
+                                </div>
+                              )}
+                            </div>
+                          </div>
 
-                      {r.status?.toLowerCase() === 'pending' && (
-                        <div className="flex gap-2 flex-shrink-0">
-                          <button
-                            onClick={() => updateReservationStatus(r.id, 'Confirmed')}
-                            className="flex items-center gap-1.5 px-3.5 py-2 bg-green-600 text-white rounded-xl text-xs font-semibold hover:bg-green-700 transition-colors"
-                          >
-                            <CheckCircle className="w-3.5 h-3.5" /> Confirm
-                          </button>
-                          <button
-                            onClick={() => updateReservationStatus(r.id, 'Rejected')}
-                            className="flex items-center gap-1.5 px-3.5 py-2 bg-red-100 text-red-700 rounded-xl text-xs font-semibold hover:bg-red-200 transition-colors"
-                          >
-                            <XCircle className="w-3.5 h-3.5" /> Reject
-                          </button>
+                          <div className="flex sm:flex-col gap-2 justify-end sm:items-end border-t sm:border-t-0 pt-3 sm:pt-0 border-[#FAF3E8]">
+                            {r.status?.toLowerCase() === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => updateReservationStatus(r.id, 'Confirmed')}
+                                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-green-700 transition-colors shadow-sm"
+                                >
+                                  <Check className="w-3.5 h-3.5" /> Confirm
+                                </button>
+                                <button
+                                  onClick={() => updateReservationStatus(r.id, 'Rejected')}
+                                  className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-white border border-red-200 text-red-600 px-4 py-2 rounded-xl text-xs font-semibold hover:bg-red-50 transition-colors"
+                                >
+                                  <X className="w-3.5 h-3.5" /> Reject
+                                </button>
+                              </>
+                            )}
+                            {r.status?.toLowerCase() === 'confirmed' && (
+                              <button
+                                onClick={() => updateReservationStatus(r.id, 'Cancelled')}
+                                className="w-full sm:w-auto flex items-center justify-center gap-1.5 bg-white border border-[#E6D3B3] text-[#6F4E37]/70 px-4 py-2 rounded-xl text-xs font-semibold hover:text-red-600 hover:border-red-200 transition-colors"
+                              >
+                                <XCircle className="w-3.5 h-3.5" /> Cancel Booking
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           )}
 
-          {/* MESSAGES */}
+          {/* MESSAGES INBOX VIEW */}
           {tab === 'messages' && (
             <div>
-              <h1 className="font-display text-3xl font-bold text-[#2E1A12] mb-6">Customer Messages</h1>
+              <h1 className="font-display text-3xl font-bold text-[#2E1A12] mb-6">Inbox Messages</h1>
               <div className="space-y-3">
-                {messages.length === 0 ? (
-                  <div className="text-center py-16 text-[#6F4E37]/50">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No contact messages found</p>
-                  </div>
-                ) : messages.map(m => (
-                  <div key={m.id} className={`bg-white rounded-2xl border border-[#E6D3B3] p-5 relative transition-all ${!m.is_read ? 'ring-2 ring-[#D4AF37]/30 border-[#D4AF37]' : ''}`}>
-                    <div className="flex justify-between items-start gap-4 flex-wrap">
+                {messages.map(m => (
+                  <div key={m.id} className={`bg-white border rounded-2xl p-5 transition-all ${!m.is_read ? 'border-[#D4AF37] ring-1 ring-[#D4AF37]/20 shadow-sm' : 'border-[#E6D3B3]'}`}>
+                    <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="font-semibold text-[#2E1A12]">{m.name}</p>
-                        <p className="text-xs text-[#6F4E37]/60">{m.email} · {new Date(m.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
-                        <p className="text-sm text-[#4E342E] mt-3 bg-[#FAF3E8]/40 p-3 rounded-xl border border-[#E6D3B3]/40 font-serif leading-relaxed">"{m.message}"</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-display font-bold text-[#2E1A12] text-base">{m.name}</h3>
+                          {!m.is_read && <span className="bg-[#D4AF37]/15 text-[#6F4E37] text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">New</span>}
+                        </div>
+                        <p className="text-xs text-[#6F4E37]/70 mt-0.5">{m.email} · {m.subject || 'General Inquiry'}</p>
+                        <p className="text-sm text-[#4E342E] mt-3 whitespace-pre-wrap bg-[#FAF3E8]/40 p-3 rounded-xl border border-[#E6D3B3]/40">{m.message}</p>
+                        <p className="text-[10px] text-[#6F4E37]/40 mt-2">{new Date(m.created_at).toLocaleString('en-IN')}</p>
                       </div>
                       {!m.is_read && (
-                        <button
-                          onClick={() => markRead(m.id)}
-                          className="text-xs font-bold text-[#D4AF37] bg-[#D4AF37]/10 px-3 py-1.5 rounded-xl hover:bg-[#D4AF37]/20 transition-all flex items-center gap-1"
-                        >
-                          <Check className="w-3.5 h-3.5" /> Mark read
+                        <button onClick={() => markRead(m.id)} className="flex items-center gap-1 text-xs text-[#D4AF37] hover:text-[#C8A228] font-bold bg-[#FAF3E8] px-3 py-1.5 rounded-xl border border-[#E6D3B3]">
+                          <Check className="w-3.5 h-3.5" /> Mark Read
                         </button>
                       )}
                     </div>
                   </div>
                 ))}
+                {messages.length === 0 && (
+                  <div className="text-center py-16 text-[#6F4E37]/50 bg-white rounded-2xl border border-[#E6D3B3]">No contact history submissions found.</div>
+                )}
               </div>
             </div>
           )}
