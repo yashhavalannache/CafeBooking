@@ -91,8 +91,8 @@ export default function ContactPage() {
                 <div className="space-y-5">
                   {[
                     { icon: MapPin, title: 'Address', text: '42 Coffee Lane, Indiranagar\nBengaluru, Karnataka 560038' },
-                    { icon: Phone, title: 'Phone', text: '+91 80 1234 5678' },
-                    { icon: Mail, title: 'Email', text: 'hello@brewedandbliss.in' },
+                    { icon: Phone, title: 'Phone', text: '+91 89 5119 2623' },
+                    { icon: Mail, title: 'Email', text: 'thunderbolt1899@gmail.com' },
                   ].map(item => (
                     <div key={item.title} className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-xl bg-[#4E342E]/10 flex items-center justify-center flex-shrink-0">
@@ -115,9 +115,9 @@ export default function ContactPage() {
                 </div>
                 <div className="space-y-2">
                   {[
-                    { day: 'Mon – Fri', time: '7:00 AM – 10:00 PM' },
-                    { day: 'Saturday', time: '8:00 AM – 11:00 PM' },
-                    { day: 'Sunday', time: '9:00 AM – 9:00 PM' },
+                    { day: 'Monday – Friday', time: '5:00 PM – 10:00 PM' },
+                { day: 'Saturday', time: '3:00 PM – 11:00 PM' },
+                { day: 'Sunday', time: '9:00 AM – 11:00 PM' },
                   ].map(h => (
                     <div key={h.day} className="flex justify-between text-sm">
                       <span className="text-[#E6D3B3]/60">{h.day}</span>

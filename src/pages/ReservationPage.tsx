@@ -21,15 +21,38 @@ const useNavigateMock = () => {
   }
 };
 
-const TIME_SLOTS = [
-  '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
-  '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM',
-  '01:00 PM', '01:30 PM', '02:00 PM', '02:30 PM',
-  '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM',
-  '05:00 PM', '05:30 PM', '06:00 PM', '06:30 PM',
-  '07:00 PM', '07:30 PM', '08:00 PM', '08:30 PM',
-  '09:00 PM',
-];
+// Helper function to generate 30-minute time slots between two hours (24h format inputs)
+const generateTimeSlots = (startHour: number, endHour: number) => {
+  const slots: string[] = [];
+  for (let hour = startHour; hour <= endHour; hour++) {
+    const maxMinutes = hour === endHour ? 0 : 30;
+    for (let min = 0; min <= maxMinutes; min += 30) {
+      const period = hour >= 12 ? 'PM' : 'AM';
+      let displayHour = hour % 12;
+      if (displayHour === 0) displayHour = 12;
+      const displayMin = min === 0 ? '00' : '30';
+      
+      slots.push(`${displayHour}:${displayMin} ${period}`);
+    }
+  }
+  return slots;
+};
+
+// Dynamically fetch slots depending on the picked date string (YYYY-MM-DD)
+const getTimeSlotsForDate = (dateString: string): string[] => {
+  if (!dateString) return [];
+  
+  const date = new Date(dateString);
+  const day = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+  if (day === 0) {
+    return generateTimeSlots(9, 23); // Sunday: 9:00 AM to 11:00 PM
+  } else if (day === 6) {
+    return generateTimeSlots(15, 23); // Saturday: 3:00 PM to 11:00 PM
+  } else {
+    return generateTimeSlots(17, 22); // Monday - Friday: 5:00 PM to 10:00 PM
+  }
+};
 
 type TableStatus = 'available' | 'booked' | 'selected';
 
@@ -37,21 +60,45 @@ type TableData = {
   id: number;
   capacity: number;
   zone: string;
+  label: string;
 };
 
+// --- Architectural Floor Plan Layout Data Mapping ---
 const TABLES: TableData[] = [
-  { id: 1, capacity: 2, zone: 'Window' },
-  { id: 2, capacity: 4, zone: 'Window' },
-  { id: 3, capacity: 2, zone: 'Center' },
-  { id: 4, capacity: 6, zone: 'Center' },
-  { id: 5, capacity: 4, zone: 'Center' },
-  { id: 6, capacity: 2, zone: 'Corner' },
-  { id: 7, capacity: 8, zone: 'Private' },
-  { id: 8, capacity: 4, zone: 'Corner' },
-  { id: 9, capacity: 2, zone: 'Bar' },
-  { id: 10, capacity: 4, zone: 'Bar' },
-  { id: 11, capacity: 2, zone: 'Outdoor' },
-  { id: 12, capacity: 6, zone: 'Outdoor' },
+  // Top Left & Right Window Zones
+  { id: 1, capacity: 4, zone: 'Window Left', label: 'T1' },
+  { id: 2, capacity: 2, zone: 'Window Left', label: 'T2' },
+  { id: 3, capacity: 4, zone: 'Window Right', label: 'T3' },
+  { id: 4, capacity: 2, zone: 'Window Right', label: 'T4' },
+  { id: 5, capacity: 4, zone: 'Window Right', label: 'T5' },
+
+  // Left Wall / Bar Zone Seating
+  { id: 6, capacity: 2, zone: 'Bar Left', label: 'T6' },
+  { id: 7, capacity: 4, zone: 'Bar Left', label: 'T7' },
+  { id: 8, capacity: 2, zone: 'Bar Left', label: 'T8' },
+
+  // Center Zone Clusters
+  { id: 9, capacity: 2, zone: 'Center', label: 'T9' },
+  { id: 10, capacity: 2, zone: 'Center', label: 'T10' },
+  { id: 11, capacity: 2, zone: 'Center', label: 'T11' },
+  { id: 12, capacity: 2, zone: 'Center', label: 'T12' },
+
+  // Right Side Bar Zone (6-seater stacks)
+  { id: 13, capacity: 6, zone: 'Bar Right', label: 'T13' },
+  { id: 14, capacity: 6, zone: 'Bar Right', label: 'T14' },
+  { id: 15, capacity: 6, zone: 'Bar Right', label: 'T15' },
+
+  // Private Zone (Grand Center VIP Table)
+  { id: 16, capacity: 12, zone: 'Private Suite', label: 'T16 (VIP)' },
+
+  // Bottom Row: Corners & Outdoor dynamic segments
+  { id: 17, capacity: 2, zone: 'Corner Bottom Left', label: 'T17' },
+  { id: 18, capacity: 2, zone: 'Corner Bottom Left', label: 'T18' },
+  { id: 19, capacity: 4, zone: 'Outdoor', label: 'T19' },
+  { id: 20, capacity: 4, zone: 'Outdoor', label: 'T20' },
+  { id: 21, capacity: 4, zone: 'Outdoor', label: 'T21' },
+  { id: 22, capacity: 4, zone: 'Outdoor', label: 'T22' },
+  { id: 23, capacity: 2, zone: 'Corner Bottom Right', label: 'T23' },
 ];
 
 type FormData = {
@@ -80,7 +127,6 @@ const defaultForm: FormData = {
   special_requests: '',
 };
 
-// GLOBAL COMPONENT INJECTION TO FIX SINGLE-CHARACTER FOCUS BUG
 const Field = ({ label, id, error, children }: { label: string; id: string; error?: string; children: React.ReactNode }) => (
   <div>
     <label htmlFor={id} className="block text-sm font-medium text-[#4E342E] mb-1.5">{label}</label>
@@ -220,12 +266,24 @@ export default function ReservationPage() {
   const [form, setForm] = useState<FormData>(defaultForm);
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
   const [bookedTables, setBookedTables] = useState<number[]>([]);
+  const [loadingTables, setLoadingTables] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<Reservation | null>(null);
   const [errors, setErrors] = useState<Partial<FormData>>({});
 
+  // Compute available operational time slots depending on the selected date string
+  const activeTimeSlots = getTimeSlotsForDate(form.reservation_date);
+
+  // Clear previously picked times if they fall out of bounds when switching days
+  useEffect(() => {
+    if (form.reservation_time && !activeTimeSlots.includes(form.reservation_time)) {
+      setForm(f => ({ ...f, reservation_time: '' }));
+    }
+  }, [form.reservation_date, activeTimeSlots]);
+
   useEffect(() => {
     if (!form.reservation_date || !form.reservation_time) return;
+    loadingTables(true);
     supabase
       .rpc('get_booked_tables', {
         res_date: form.reservation_date,
@@ -238,6 +296,9 @@ export default function ReservationPage() {
         }
         setBookedTables((data || []).map((r: any) => r.table_number).filter(Boolean));
         setSelectedTable(null);
+      })
+      .finally(() => {
+        setLoadingTables(false);
       });
   }, [form.reservation_date, form.reservation_time]);
 
@@ -247,7 +308,7 @@ export default function ReservationPage() {
     return 'available';
   };
 
-  const isTableSuitable = (table: TableData) => table.capacity >= form.guests;
+  const isTableSuitable = (table: TableData) => true; // Always allow selection
 
   const validate = () => {
     const errs: Partial<FormData> = {};
@@ -264,6 +325,10 @@ export default function ReservationPage() {
     e.preventDefault();
     if (!validate()) {
       toast('Please fix the errors above.', 'error');
+      return;
+    }
+    if (selectedTable === null) {
+      toast('Please select an available dining table from the map layout.', 'error');
       return;
     }
 
@@ -316,6 +381,34 @@ export default function ReservationPage() {
         ? 'border-red-400 focus:border-red-400 focus:ring-red-100'
         : 'border-[#E6D3B3] focus:border-[#D4AF37] focus:ring-[#D4AF37]/20'
     }`;
+
+  // Helper inside component to render stylized layout table nodes natively
+  const RenderTableButton = ({ id }: { id: number }) => {
+    const table = TABLES.find(t => t.id === id);
+    if (!table) return null;
+    
+    const status = getTableStatus(table.id);
+    const isDisabled = status === 'booked' || loadingTables;
+
+    return (
+      <button
+        type="button"
+        disabled={isDisabled}
+        onClick={() => setSelectedTable(table.id)}
+        title={status === 'booked' ? 'Already booked' : `Table ${table.label} · Capacity: ${table.capacity} Seats (Your Party: ${form.guests})`}
+        className={`relative flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all duration-200 min-w-[55px] h-12 text-xs font-bold ${
+          status === 'selected'
+            ? 'bg-[#D4AF37] border-[#C8A228] text-[#2E1A12] shadow-md scale-105 z-10'
+            : status === 'booked'
+              ? 'bg-red-100 border-red-300 text-red-400 cursor-not-allowed'
+              : 'bg-white border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400 hover:scale-102 cursor-pointer'
+        }`}
+      >
+        <span className="tracking-tight">{table.label}</span>
+        <span className="text-[8px] font-normal opacity-60">{table.capacity}P</span>
+      </button>
+    );
+  };
 
   return (
     <div 
@@ -383,7 +476,7 @@ export default function ReservationPage() {
                       onChange={e => setForm(f => ({ ...f, guests: +e.target.value }))}
                       className="w-full pl-11 pr-4 py-3 bg-white border border-[#E6D3B3] rounded-xl text-[#2E1A12] text-sm focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 cursor-pointer"
                     >
-                      {Array.from({ length: 20 }, (_, i) => i + 1).map(n => (
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
                         <option key={n} value={n}>{n} {n === 1 ? 'Guest' : 'Guests'}</option>
                       ))}
                     </select>
@@ -414,22 +507,29 @@ export default function ReservationPage() {
                 <label className="block text-sm font-medium text-[#4E342E] mb-3">
                   Select Time {errors.reservation_time && <span className="text-red-600 font-normal ml-1">(required)</span>}
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {TIME_SLOTS.map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setForm(f => ({ ...f, reservation_time: t }))}
-                      className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
-                        form.reservation_time === t
-                          ? 'bg-[#4E342E] text-[#FFF8E7] shadow-md'
-                          : 'bg-[#FFF8E7] border border-[#E6D3B3] text-[#4E342E] hover:border-[#D4AF37]'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
+                
+                {form.reservation_date ? (
+                  <div className="flex flex-wrap gap-2">
+                    {activeTimeSlots.map(t => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, reservation_time: t }))}
+                        className={`px-3.5 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                          form.reservation_time === t
+                            ? 'bg-[#4E342E] text-[#FFF8E7] shadow-md'
+                            : 'bg-[#FFF8E7] border border-[#E6D3B3] text-[#4E342E] hover:border-[#D4AF37]'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-[#6F4E37]/60 italic bg-[#FAF3E8] p-3 rounded-xl border border-dashed border-[#E6D3B3]">
+                    Please select a date first to view matching available operational hours.
+                  </p>
+                )}
               </div>
 
               <div className="mt-5 grid sm:grid-cols-2 gap-4">
@@ -477,7 +577,7 @@ export default function ReservationPage() {
             </div>
           </AnimatedSection>
 
-          {/* Step 2: Table Selection */}
+          {/* Step 2: Advanced Architectural Floor Plan Layout Mapping */}
           <AnimatedSection delay={100}>
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-[#E6D3B3] p-6 shadow-sm">
               <h2 className="font-display font-semibold text-[#2E1A12] text-xl mb-2 flex items-center gap-2">
@@ -485,89 +585,149 @@ export default function ReservationPage() {
                 Choose Your Table
               </h2>
               {(!form.reservation_date || !form.reservation_time) && (
-                <p className="text-sm text-[#6F4E37]/60 mb-4">Select a date and time above to see availability.</p>
+                <p className="text-sm text-[#6F4E37]/60 mb-4">Select a date and time above to see live layout availability status.</p>
               )}
 
-              <div className="flex items-center gap-6 text-xs mb-5">
+              <div className="flex items-center gap-6 text-xs mb-5 bg-[#FAF3E8]/50 p-3 rounded-xl border border-[#E6D3B3]/40 w-fit">
                 {[
-                  { color: 'bg-green-500', label: 'Available' },
-                  { color: 'bg-red-400', label: 'Booked' },
-                  { color: 'bg-[#D4AF37]', label: 'Selected' },
+                  { color: 'bg-white border-green-300 text-green-700', label: 'Available' },
+                  { color: 'bg-red-100 border-red-300 text-red-400', label: 'Booked' },
+                  { color: 'bg-[#D4AF37] border-[#C8A228] text-[#2E1A12]', label: 'Selected' },
                 ].map(l => (
                   <div key={l.label} className="flex items-center gap-1.5">
-                    <span className={`w-3 h-3 rounded-sm ${l.color}`} />
+                    <span className={`w-3.5 h-3.5 border rounded-sm text-center text-[9px] font-bold ${l.color}`}>✓</span>
                     <span className="text-[#6F4E37]/70 font-medium">{l.label}</span>
                   </div>
                 ))}
               </div>
 
-              <div className="bg-[#FAF3E8] rounded-xl p-5 border border-[#E6D3B3]">
-                <div className="relative">
-                  <p className="text-center text-xs text-[#6F4E37]/50 font-medium uppercase tracking-widest mb-4">— Entrance —</p>
-                  <div className="space-y-4">
-                    {['Window', 'Center', 'Corner', 'Bar', 'Private', 'Outdoor'].map(zone => {
-                      const zoneTables = TABLES.filter(t => t.zone === zone);
-                      return (
-                        <div key={zone}>
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-[#6F4E37]/50 font-semibold mb-2">{zone} Zone</p>
-                          <div className="flex flex-wrap gap-3">
-                            {zoneTables.map(table => {
-                              const status = getTableStatus(table.id);
-                              const suitable = isTableSuitable(table);
-                              const isDisabled = status === 'booked' || !suitable;
-                              return (
-                                <button
-                                  key={table.id}
-                                  type="button"
-                                  disabled={isDisabled}
-                                  onClick={() => setSelectedTable(table.id)}
-                                  title={!suitable ? `Needs capacity for ${form.guests} guests` : status === 'booked' ? 'Already booked' : `Table ${table.id} · ${table.capacity} seats`}
-                                  className={`relative flex flex-col items-center justify-center w-16 h-14 rounded-xl border-2 text-xs font-bold transition-all duration-200 ${
-                                    status === 'selected'
-                                      ? 'bg-[#D4AF37] border-[#C8A228] text-[#2E1A12] shadow-lg scale-105'
-                                      : status === 'booked'
-                                        ? 'bg-red-100 border-red-300 text-red-400 cursor-not-allowed'
-                                        : !suitable
-                                          ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                                          : 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100 hover:scale-105 cursor-pointer'
-                                  }`}
-                                >
-                                  <span>T{table.id}</span>
-                                  <span className="text-[9px] font-normal opacity-70">{table.capacity} seats</span>
-                                </button>
-                              );
-                            })}
+              {/* Spatial Floor Plan Blueprint Grid Layout */}
+              <div className="bg-[#FAF3E8] rounded-xl p-5 border border-[#E6D3B3] overflow-x-auto relative">
+                {loadingTables && (
+                  <div className="absolute inset-0 bg-[#FAF3E8]/80 backdrop-blur-xs flex items-center justify-center z-50 rounded-xl">
+                    <div className="flex items-center gap-2 text-[#4E342E] text-sm font-medium">
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Fetching real-time floor occupancy blueprint...
+                    </div>
+                  </div>
+                )}
+
+                <div className="min-w-[720px] space-y-6">
+                  {/* Top Row Segment: Window Zones and Counter */}
+                  <div className="grid grid-cols-3 gap-4 items-start">
+                    {/* Left Windows */}
+                    <div className="border border-dashed border-gray-300 rounded-xl p-3 bg-white/40">
+                      <p className="text-[10px] uppercase tracking-wider text-center text-gray-400 font-bold mb-2">Window Zones (Left)</p>
+                      <div className="flex justify-center gap-3">
+                        <RenderTableButton id={1} />
+                        <RenderTableButton id={2} />
+                      </div>
+                    </div>
+
+                    {/* Visual Center Salad Bar Hub */}
+                    <div className="bg-amber-100/60 border border-amber-200 rounded-xl p-2 text-center text-amber-900/60 text-[10px] font-semibold tracking-widest uppercase h-full flex items-center justify-center">
+                      🥦 Fresh Salad Counter 🍅
+                    </div>
+
+                    {/* Right Windows */}
+                    <div className="border border-dashed border-gray-300 rounded-xl p-3 bg-white/40">
+                      <p className="text-[10px] uppercase tracking-wider text-center text-gray-400 font-bold mb-2">Window Zones (Right)</p>
+                      <div className="flex justify-center gap-3">
+                        <RenderTableButton id={3} />
+                        <RenderTableButton id={4} />
+                        <RenderTableButton id={5} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mid Floor Seating Blocks */}
+                  <div className="grid grid-cols-12 gap-4">
+                    {/* Left Bar Counters */}
+                    <div className="col-span-2 flex flex-col gap-3 justify-center border-r border-dashed border-gray-200 pr-2">
+                      <p className="text-[9px] uppercase tracking-wider text-gray-400 font-bold text-center">Bar Left</p>
+                      <RenderTableButton id={6} />
+                      <RenderTableButton id={7} />
+                      <RenderTableButton id={8} />
+                    </div>
+
+                    {/* Center Clusters & Special VIP Private Suite */}
+                    <div className="col-span-8 flex flex-col justify-between gap-6 px-2">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-center text-gray-400 font-bold mb-2">Center Arena Clusters</p>
+                        <div className="grid grid-cols-4 gap-2 justify-items-center bg-white/30 p-3 rounded-xl border border-gray-200">
+                          <RenderTableButton id={9} />
+                          <RenderTableButton id={10} />
+                          <div className="w-[1px] h-10 bg-gray-200 self-center" /> 
+                          <RenderTableButton id={11} />
+                          <RenderTableButton id={12} />
+                        </div>
+                      </div>
+
+                      <div className="border-2 border-amber-200/80 rounded-xl p-3 bg-amber-50/40 shadow-inner">
+                        <p className="text-[10px] uppercase tracking-widest text-center text-amber-800 font-bold mb-2">Private Zone Room</p>
+                        <div className="flex justify-center">
+                          <div className="w-full max-w-md bg-white border border-amber-300 rounded-xl p-1.5 flex items-center justify-between gap-4">
+                            <div className="text-[10px] font-semibold pl-2 text-amber-900/70">Grand VIP Suite</div>
+                            <RenderTableButton id={16} />
                           </div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    </div>
+
+                    {/* Right Bar Stacked Seating Blocks */}
+                    <div className="col-span-2 flex flex-col gap-3 justify-center border-l border-dashed border-gray-200 pl-2">
+                      <p className="text-[9px] uppercase tracking-wider text-gray-400 font-bold text-center">Bar Right</p>
+                      <RenderTableButton id={13} />
+                      <RenderTableButton id={14} />
+                      <RenderTableButton id={15} />
+                    </div>
                   </div>
+
+                  {/* Bottom Row Segment: Corners & Outdoor Terrace Area Layout */}
+                  <div className="grid grid-cols-12 gap-4 items-end pt-2 border-t border-dashed border-gray-200">
+                    <div className="col-span-3 border border-dashed border-gray-300 rounded-xl p-2.5 bg-white/30 flex flex-col gap-2">
+                      <p className="text-[9px] uppercase tracking-wider text-gray-400 font-bold text-center">Corner Btm Left</p>
+                      <div className="flex justify-center gap-2">
+                        <RenderTableButton id={17} />
+                        <RenderTableButton id={18} />
+                      </div>
+                    </div>
+
+                    <div className="col-span-6 border border-emerald-200 rounded-xl p-2.5 bg-emerald-50/40 shadow-sm">
+                      <p className="text-[10px] uppercase tracking-wider text-center text-emerald-800 font-bold mb-2">🌴 Open Air Outdoor Terrace 🍃</p>
+                      <div className="flex justify-center gap-3">
+                        <RenderTableButton id={19} />
+                        <RenderTableButton id={20} />
+                        <RenderTableButton id={21} />
+                        <RenderTableButton id={22} />
+                      </div>
+                    </div>
+
+                    <div className="col-span-3 border border-dashed border-gray-300 rounded-xl p-2.5 bg-white/30 flex flex-col gap-2">
+                      <p className="text-[9px] uppercase tracking-wider text-gray-400 font-bold text-center">Corner Btm Right</p>
+                      <div className="flex justify-center">
+                        <RenderTableButton id={23} />
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </div>
-
-              {selectedTable && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                  <CheckCircle className="w-4 h-4" />
-                  Table #{selectedTable} selected · {TABLES.find(t => t.id === selectedTable)?.capacity} seats · {TABLES.find(t => t.id === selectedTable)?.zone} Zone
-                </div>
-              )}
             </div>
           </AnimatedSection>
 
-          {/* Step 3: Customer Details */}
+          {/* Step 3: Contact Information */}
           <AnimatedSection delay={200}>
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-[#E6D3B3] p-6 shadow-sm">
               <h2 className="font-display font-semibold text-[#2E1A12] text-xl mb-6 flex items-center gap-2">
                 <span className="w-7 h-7 rounded-full bg-[#4E342E] text-[#FFF8E7] flex items-center justify-center text-sm font-bold">3</span>
-                Your Details
+                Contact Information
               </h2>
-
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-3 gap-4">
                 <Field label="Full Name" id="name" error={errors.customer_name}>
                   <input
                     id="name"
                     type="text"
-                    placeholder="Aryan Sharma"
+                    placeholder="Enter full name"
                     value={form.customer_name}
                     onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))}
                     className={inputCls('customer_name')}
@@ -578,7 +738,7 @@ export default function ReservationPage() {
                   <input
                     id="email"
                     type="email"
-                    placeholder="aryan@example.com"
+                    placeholder="name@example.com"
                     value={form.customer_email}
                     onChange={e => setForm(f => ({ ...f, customer_email: e.target.value }))}
                     className={inputCls('customer_email')}
@@ -589,20 +749,22 @@ export default function ReservationPage() {
                   <input
                     id="phone"
                     type="tel"
-                    placeholder="9876543210"
+                    placeholder="10-digit number"
                     value={form.customer_phone}
                     onChange={e => setForm(f => ({ ...f, customer_phone: e.target.value }))}
                     className={inputCls('customer_phone')}
                   />
                 </Field>
+              </div>
 
-                <Field label="Special Requests" id="requests" error={undefined}>
+              <div className="mt-4">
+                <Field label="Special Notes / Requests" id="requests">
                   <textarea
                     id="requests"
-                    placeholder="Any dietary requirements, allergies, or special arrangements?"
+                    rows={3}
+                    placeholder="Allergies, wheelchair accessibility, specific high-chair setups, text layout design notes..."
                     value={form.special_requests}
                     onChange={e => setForm(f => ({ ...f, special_requests: e.target.value }))}
-                    rows={3}
                     className="w-full px-4 py-3 bg-white border border-[#E6D3B3] rounded-xl text-[#2E1A12] text-sm placeholder-[#6F4E37]/40 focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 transition-all resize-none"
                   />
                 </Field>
@@ -610,24 +772,23 @@ export default function ReservationPage() {
             </div>
           </AnimatedSection>
 
-          {/* Submit Action Button */}
-          <AnimatedSection delay={300}>
-            <div className="flex flex-col sm:flex-row gap-4 items-center">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="btn-ripple w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-[#D4AF37] to-[#C8A228] text-[#2E1A12] px-10 py-4 rounded-full font-semibold text-base hover:shadow-2xl hover:shadow-[#D4AF37]/30 hover:scale-105 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
-              >
-                {submitting ? (
-                  <><RefreshCw className="w-4 h-4 animate-spin" /> Confirming…</>
-                ) : (
-                  <>Confirm Reservation <ChevronRight className="w-4 h-4" /></>
-                )}
-              </button>
-              <p className="text-xs text-[#6F4E37]/60 text-center">
-                By booking, you agree to our cancellation policy. Free cancellation up to 2 hours before.
-              </p>
-            </div>
+          {/* Form Action Submit Buttons */}
+          <AnimatedSection delay={250} className="flex justify-end">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#D4AF37] to-[#C8A228] text-[#2E1A12] font-bold rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 transition-all text-base tracking-wide"
+            >
+              {submitting ? (
+                <>
+                  <RefreshCw className="w-5 h-5 animate-spin" /> Processing Secure Record Entry...
+                </>
+              ) : (
+                <>
+                  Confirm Dynamic Space Booking <ChevronRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
           </AnimatedSection>
         </form>
       </div>

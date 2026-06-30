@@ -835,10 +835,10 @@ export default function HomePage() {
                   <div>
                     <p className="text-xs uppercase tracking-wider text-[#D4AF37] font-semibold mb-2">Hours</p>
                     <div className="space-y-1 text-sm text-[#E6D3B3]/80">
-                      <p>Mon – Fri: 7:00 AM – 10:00 PM</p>
-                      <p>Saturday: 8:00 AM – 11:00 PM</p>
-                      <p>Sunday: 9:00 AM – 9:00 PM</p>
-                    </div>
+  <p>Mon – Fri: 5:00 PM – 10:00 PM</p>
+  <p>Saturday: 3:00 PM – 11:00 PM</p>
+  <p>Sunday: 9:00 AM – 11:00 PM</p>
+</div>
                   </div>
                 </div>
               </div>

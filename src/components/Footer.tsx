@@ -71,11 +71,11 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
-                <a href="tel:+918012345678" className="text-sm text-[#E6D3B3]/70 hover:text-[#D4AF37] transition-colors">+91 80 1234 5678</a>
+                <a href="tel:+9189 5119 2623" className="text-sm text-[#E6D3B3]/70 hover:text-[#D4AF37] transition-colors">+91 89 5119 2623</a>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-[#D4AF37] flex-shrink-0" />
-                <a href="mailto:hello@brewedandbliss.in" className="text-sm text-[#E6D3B3]/70 hover:text-[#D4AF37] transition-colors">hello@brewedandbliss.in</a>
+                <a href="mailto:thunderbolt1899@gmail.com" className="text-sm text-[#E6D3B3]/70 hover:text-[#D4AF37] transition-colors">thunderbolt1899@gmail.com</a>
               </li>
             </ul>
           </div>
@@ -85,9 +85,9 @@ export default function Footer() {
             <h3 className="font-display font-semibold text-[#FFF8E7] text-lg mb-5">Opening Hours</h3>
             <ul className="space-y-3">
               {[
-                { day: 'Monday – Friday', time: '7:00 AM – 10:00 PM' },
-                { day: 'Saturday', time: '8:00 AM – 11:00 PM' },
-                { day: 'Sunday', time: '9:00 AM – 9:00 PM' },
+                { day: 'Monday – Friday', time: '5:00 PM – 10:00 PM' },
+                { day: 'Saturday', time: '3:00 PM – 11:00 PM' },
+                { day: 'Sunday', time: '9:00 AM – 11:00 PM' },
               ].map(h => (
                 <li key={h.day} className="flex items-start gap-3">
                   <Clock className="w-4 h-4 text-[#D4AF37] flex-shrink-0 mt-0.5" />
