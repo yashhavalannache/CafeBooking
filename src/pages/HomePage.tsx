@@ -499,7 +499,7 @@ export default function HomePage() {
 
                 {/* Main Body using a cozy serif/handwritten character */}
                 <p className="font-serif italic text-xl sm:text-2xl text-[#FFF8E7] leading-relaxed tracking-wide opacity-90 drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
-                  "Cloudy Morning in Indiranagar? 🌦️ <br />
+                  "Cloudy Morning in Bangalore? 🌦️ <br />
                   Today's Perfect Match: Our house-blend <span className="text-[#E6D3B3] not-italic underline decoration-amber-200/40 underline-offset-4">Cortado</span> paired with a warm, flaky <span className="text-[#E6D3B3] not-italic">Almond Croissant</span>."
                 </p>
 
