@@ -158,7 +158,7 @@ function ConfirmationModal({ reservation, onClose }: { reservation: Reservation;
         initial={{ opacity: 0, y: 50, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="relative bg-white/80 backdrop-blur-xl border border-white/40 rounded-[2.5rem] p-6 sm:p-8 max-w-xl w-full shadow-[0_20px_60px_rgba(0,0,0,0.18)] z-10 my-8 max-h-[90vh] overflow-y-auto"
+        className="relative bg-white/80 backdrop-blur-xl border border-white/40 rounded-[2.5rem] p-6 sm:p-8 p-6 sm:p-8 max-w-xl w-full shadow-[0_20px_60px_rgba(0,0,0,0.18)] z-10 my-8 max-h-[90vh] overflow-y-auto"
       >
         <button onClick={onClose} className="absolute top-6 right-6 text-[#6F4E37]/60 hover:text-[#4E342E] transition-colors">
           <X className="w-6 h-6" />
@@ -283,7 +283,7 @@ export default function ReservationPage() {
 
   useEffect(() => {
     if (!form.reservation_date || !form.reservation_time) return;
-    loadingTables(true);
+    setLoadingTables(true);
     supabase
       .rpc('get_booked_tables', {
         res_date: form.reservation_date,
@@ -388,20 +388,23 @@ export default function ReservationPage() {
     if (!table) return null;
     
     const status = getTableStatus(table.id);
-    const isDisabled = status === 'booked' || loadingTables;
+    const suitable = isTableSuitable(table);
+    const isDisabled = status === 'booked' || !suitable || loadingTables;
 
     return (
       <button
         type="button"
         disabled={isDisabled}
         onClick={() => setSelectedTable(table.id)}
-        title={status === 'booked' ? 'Already booked' : `Table ${table.label} · Capacity: ${table.capacity} Seats (Your Party: ${form.guests})`}
+        title={!suitable ? `Needs capacity for ${form.guests} guests` : status === 'booked' ? 'Already booked' : `Table ${table.id} · ${table.capacity} seats`}
         className={`relative flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all duration-200 min-w-[55px] h-12 text-xs font-bold ${
           status === 'selected'
             ? 'bg-[#D4AF37] border-[#C8A228] text-[#2E1A12] shadow-md scale-105 z-10'
             : status === 'booked'
               ? 'bg-red-100 border-red-300 text-red-400 cursor-not-allowed'
-              : 'bg-white border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400 hover:scale-102 cursor-pointer'
+              : !suitable
+                ? 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed'
+                : 'bg-white border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400 hover:scale-102 cursor-pointer'
         }`}
       >
         <span className="tracking-tight">{table.label}</span>
@@ -673,61 +676,69 @@ export default function ReservationPage() {
                       </div>
                     </div>
 
-                    {/* Right Bar Stacked Seating Blocks */}
+                    {/* Right High-Capacity Bar Wall Stacks */}
                     <div className="col-span-2 flex flex-col gap-3 justify-center border-l border-dashed border-gray-200 pl-2">
-                      <p className="text-[9px] uppercase tracking-wider text-gray-400 font-bold text-center">Bar Right</p>
+                      <p className="text-[10px] uppercase tracking-wider text-center text-gray-400 font-bold mb-1">Bar Right</p>
                       <RenderTableButton id={13} />
                       <RenderTableButton id={14} />
                       <RenderTableButton id={15} />
                     </div>
                   </div>
 
-                  {/* Bottom Row Segment: Corners & Outdoor Terrace Area Layout */}
-                  <div className="grid grid-cols-12 gap-4 items-end pt-2 border-t border-dashed border-gray-200">
-                    <div className="col-span-3 border border-dashed border-gray-300 rounded-xl p-2.5 bg-white/30 flex flex-col gap-2">
-                      <p className="text-[9px] uppercase tracking-wider text-gray-400 font-bold text-center">Corner Btm Left</p>
-                      <div className="flex justify-center gap-2">
+                  {/* Bottom Row Promenade Area */}
+                  <div className="border-t border-dashed border-gray-300 pt-4">
+                    <p className="text-[10px] uppercase tracking-widest text-center text-gray-400 font-bold mb-3">Outdoor Promenade & Terrace Al Fresco</p>
+                    <div className="grid grid-cols-12 gap-3 items-center">
+                      
+                      {/* Bottom Left Corner Stalls */}
+                      <div className="col-span-3 flex gap-2 justify-start items-center bg-white/20 p-2 rounded-xl border border-gray-200/60">
+                        <span className="text-[8px] text-gray-400 font-bold uppercase rotate-[-90deg]">CRNR</span>
                         <RenderTableButton id={17} />
                         <RenderTableButton id={18} />
                       </div>
-                    </div>
 
-                    <div className="col-span-6 border border-emerald-200 rounded-xl p-2.5 bg-emerald-50/40 shadow-sm">
-                      <p className="text-[10px] uppercase tracking-wider text-center text-emerald-800 font-bold mb-2">🌴 Open Air Outdoor Terrace 🍃</p>
-                      <div className="flex justify-center gap-3">
+                      {/* Main Al Fresco Group Rows */}
+                      <div className="col-span-6 flex justify-center gap-3 bg-emerald-50/30 p-2 rounded-xl border border-emerald-200/50">
                         <RenderTableButton id={19} />
                         <RenderTableButton id={20} />
                         <RenderTableButton id={21} />
                         <RenderTableButton id={22} />
                       </div>
-                    </div>
 
-                    <div className="col-span-3 border border-dashed border-gray-300 rounded-xl p-2.5 bg-white/30 flex flex-col gap-2">
-                      <p className="text-[9px] uppercase tracking-wider text-gray-400 font-bold text-center">Corner Btm Right</p>
-                      <div className="flex justify-center">
+                      {/* Bottom Right Corner Stalls */}
+                      <div className="col-span-3 flex justify-end items-center bg-white/20 p-2 rounded-xl border border-gray-200/60">
                         <RenderTableButton id={23} />
+                        <span className="text-[8px] text-gray-400 font-bold uppercase rotate-[90deg] ml-1">CRNR</span>
                       </div>
                     </div>
                   </div>
 
                 </div>
               </div>
+
+              {selectedTable && (
+                <div className="mt-3 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  Table Unit #{selectedTable} Selected · Accommodates up to {TABLES.find(t => t.id === selectedTable)?.capacity} occupants ({TABLES.find(t => t.id === selectedTable)?.zone} Area).
+                </div>
+              )}
             </div>
           </AnimatedSection>
 
-          {/* Step 3: Contact Information */}
+          {/* Step 3: Customer Details */}
           <AnimatedSection delay={200}>
             <div className="bg-white/95 backdrop-blur-sm rounded-2xl border border-[#E6D3B3] p-6 shadow-sm">
               <h2 className="font-display font-semibold text-[#2E1A12] text-xl mb-6 flex items-center gap-2">
                 <span className="w-7 h-7 rounded-full bg-[#4E342E] text-[#FFF8E7] flex items-center justify-center text-sm font-bold">3</span>
-                Contact Information
+                Your Details
               </h2>
-              <div className="grid sm:grid-cols-3 gap-4">
+
+              <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Full Name" id="name" error={errors.customer_name}>
                   <input
                     id="name"
                     type="text"
-                    placeholder="Enter full name"
+                    placeholder="Aryan Sharma"
                     value={form.customer_name}
                     onChange={e => setForm(f => ({ ...f, customer_name: e.target.value }))}
                     className={inputCls('customer_name')}
@@ -738,7 +749,7 @@ export default function ReservationPage() {
                   <input
                     id="email"
                     type="email"
-                    placeholder="name@example.com"
+                    placeholder="aryan@example.com"
                     value={form.customer_email}
                     onChange={e => setForm(f => ({ ...f, customer_email: e.target.value }))}
                     className={inputCls('customer_email')}
@@ -749,22 +760,20 @@ export default function ReservationPage() {
                   <input
                     id="phone"
                     type="tel"
-                    placeholder="10-digit number"
+                    placeholder="9876543210"
                     value={form.customer_phone}
                     onChange={e => setForm(f => ({ ...f, customer_phone: e.target.value }))}
                     className={inputCls('customer_phone')}
                   />
                 </Field>
-              </div>
 
-              <div className="mt-4">
-                <Field label="Special Notes / Requests" id="requests">
+                <Field label="Special Requests" id="requests" error={undefined}>
                   <textarea
                     id="requests"
-                    rows={3}
-                    placeholder="Allergies, wheelchair accessibility, specific high-chair setups, text layout design notes..."
+                    placeholder="Any dietary requirements, allergies, or special arrangements?"
                     value={form.special_requests}
                     onChange={e => setForm(f => ({ ...f, special_requests: e.target.value }))}
+                    rows={3}
                     className="w-full px-4 py-3 bg-white border border-[#E6D3B3] rounded-xl text-[#2E1A12] text-sm placeholder-[#6F4E37]/40 focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]/20 transition-all resize-none"
                   />
                 </Field>
@@ -772,23 +781,24 @@ export default function ReservationPage() {
             </div>
           </AnimatedSection>
 
-          {/* Form Action Submit Buttons */}
-          <AnimatedSection delay={250} className="flex justify-end">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#D4AF37] to-[#C8A228] text-[#2E1A12] font-bold rounded-xl shadow-lg hover:shadow-xl disabled:opacity-50 transition-all text-base tracking-wide"
-            >
-              {submitting ? (
-                <>
-                  <RefreshCw className="w-5 h-5 animate-spin" /> Processing Secure Record Entry...
-                </>
-              ) : (
-                <>
-                  Confirm Dynamic Space Booking <ChevronRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
+          {/* Submit Action Button */}
+          <AnimatedSection delay={300}>
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-ripple w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-[#D4AF37] to-[#C8A228] text-[#2E1A12] px-10 py-4 rounded-full font-semibold text-base hover:shadow-2xl hover:shadow-[#D4AF37]/30 hover:scale-105 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {submitting ? (
+                  <><RefreshCw className="w-4 h-4 animate-spin" /> Confirming…</>
+                ) : (
+                  <>Confirm Reservation <ChevronRight className="w-4 h-4" /></>
+                )}
+              </button>
+              <p className="text-xs text-[#6F4E37]/60 text-center">
+                By booking, you agree to our cancellation policy. Free cancellation up to 2 hours before.
+              </p>
+            </div>
           </AnimatedSection>
         </form>
       </div>
